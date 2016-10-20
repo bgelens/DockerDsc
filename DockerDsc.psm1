@@ -51,10 +51,10 @@ class DockerService
     [void] Set ()
     {
         $DockerDPath = ResolveDockerDPath -Path $this.Path
-    if ($DockerDPath -is [String]::Empty)
-    {
-        throw 'Dockerd.exe was not found at path.'
-    }
+        if ($DockerDPath -is [String]::Empty)
+        {
+            throw 'Dockerd.exe was not found at path.'
+        }
         if ($this.Ensure -eq [Ensure]::Present)
         {
             Write-Verbose -Message 'Creating Docker Service'
