@@ -50,26 +50,18 @@ class DockerService
 
     [void] Set ()
     {
-        $DockerDPath = ResolveDockerDPath -Path $this.Path
-        if ($DockerDPath -is [String]::Empty)
+        $DockerDPath = $this.ResolveDockerDPath($this.Path)
+        if ($DockerDPath -eq [String]::Empty)
         {
             throw 'Dockerd.exe was not found at path.'
         }
-        if ($this.Ensure -eq [Ensure]::Present)
+        
+        if (($this.Ensure -eq [Ensure]::Absent) -and (Get-Service -Name docker -ErrorAction SilentlyContinue))
         {
-            Write-Verbose -Message 'Creating Docker Service'
-            & $DockerDPath --register-service
+            Write-Verbose -Message "Docker Service is running. Stopping now."
+            Stop-Service -Name docker
         }
-        else
-        {
-            Write-Verbose -Message 'Removing Docker Service'
-            if (Get-Service -Name docker -ErrorAction SilentlyContinue)
-            {
-                Write-Verbose -Message 'Docker Service is running. Stopping now.'
-                Stop-Service -Name docker
-            }
-            & $DockerDPath --unregister-service
-        }
+        $this.DockerDReg($DockerDPath,$this.Ensure)
     }
 
     [String] ResolveDockerDPath ([String] $Path)
@@ -89,5 +81,18 @@ class DockerService
             throw 'Dockerd.exe was not found'
         }
         return $DockerDPath
+    }
+    [void] DockerDReg ([String] $Path, [Ensure] $Ensure)
+    {
+        if ($Ensure -eq [Ensure]::Present)
+        {
+            Write-Verbose -Message 'Registering Docker Service'
+            & $Path --register-service
+        }
+        else
+        {
+            Write-Verbose -Message 'Removing Docker Service'
+            & $Path --unregister-service
+        }
     }
 }
