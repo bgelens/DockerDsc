@@ -1,4 +1,4 @@
-Build status dev: **ADD Label after appveyor hookup**
+Build status dev: [![Build status](https://ci.appveyor.com/api/projects/status/wkyb8k22envp0rdj/branch/Dev?svg=true)](https://ci.appveyor.com/project/bgelens/dockerdsc/branch/Dev)
 
 # DockerDsc
 
