@@ -1,4 +1,4 @@
-using module ..\..\DockerDsc.psm1
+using module ..\..\DSCResources\DockerService\DockerService.psm1
 
 $DockerServiceResource = [DockerService]::new()
 $DockerServiceResource.Ensure = [Ensure]::Present
