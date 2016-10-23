@@ -38,13 +38,28 @@ class DockerService
 
     [bool] Test ()
     {
-        if ((Get-Service -Name Docker -ErrorAction SilentlyContinue) -and ($this.Ensure -eq [Ensure]::Present))
+        $Service = Get-Service -Name Docker -ErrorAction SilentlyContinue
+        if ($this.Ensure -eq [Ensure]::Present)
         {
-            return $true
+            if ($null -ne $Service)
+            {
+                return $true
+            }
+            else
+            {
+                return $false 
+            }
         }
         else
         {
-            return $false
+            if ($null -eq $Service)
+            {
+                return $true
+            }
+            else
+            {
+                return $false
+            }
         }
     }
 
