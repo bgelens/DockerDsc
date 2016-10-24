@@ -1,4 +1,4 @@
-using module ..\..\DSCResources\DockerService\DockerService.psm1
+using module ..\..\DSCResources\DockerService\DockerService.psd1
 
 #region HEADER
 
@@ -51,6 +51,12 @@ InModuleScope -ModuleName DockerService {
                 $DockerServiceResource.Test() | should Be $true
             }
         }
+        
+    }
+    Describe 'Get Method' {
+
+    }
+    Describe 'Set Method' {
         
     }
 }

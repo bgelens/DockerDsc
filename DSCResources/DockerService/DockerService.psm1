@@ -1,3 +1,7 @@
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSDSCDscExamplesPresent', '')]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSDSCDscTestsPresent', '')]
+param ()
+
 enum Ensure
 {
     Present
@@ -28,12 +32,11 @@ class DockerService
         {
             $false
         }
-
-        return @{
-            Ensure = $this.Ensure
-            Path = $DockerDPath
-            ServiceInstalled = $_ServiceInstalled
-        }
+        $ReturnObj = [DockerService]::new()
+        $ReturnObj.Ensure = $this.Ensure
+        $ReturnObj.Path = $DockerDPath
+        $ReturnObj.ServiceInstalled = $_ServiceInstalled
+        return $ReturnObj
     }
 
     [bool] Test ()
