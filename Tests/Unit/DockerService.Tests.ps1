@@ -53,10 +53,60 @@ InModuleScope -ModuleName DockerService {
         }
         
     }
-    Describe 'Get Method' {
 
+    Describe 'Get Method' {
+        
+        Context 'With valid Path' {
+
+            $dockerDsc = [DockerService]::new()
+            $dockerDsc.Ensure = [Ensure]::Present
+            $dockerDsc = $dockerDsc | Add-Member -MemberType ScriptMethod -Name ResolveDockerDPath -Value { return 'TestDrive:\dockerd.exe' } -Force -PassThru
+            Mock -CommandName Get-Service -MockWith {[pscustomobject]@{Name='Docker'}}
+
+            It 'Get should return DockerService object' {
+                $object = $dockerDsc.Get()
+
+                $object.GetType().Name | Should Be 'DockerService'
+                $object.Ensure | Should Be 'Present'
+                $object.Path | Should Be 'TestDrive:\dockerd.exe'
+                $object.ServiceInstalled | Should Be $true
+            }
+        }
+
+        Context 'With invalid Path' {
+
+            $dockerDsc = [DockerService]::new()
+            $dockerDsc.Ensure = [Ensure]::Present
+            $dockerDsc = $dockerDsc | Add-Member -MemberType ScriptMethod -Name ResolveDockerDPath -Value { throw 'Dockerd.exe was not found' } -Force -PassThru
+            Mock -CommandName Get-Service -MockWith { $null }
+
+            It 'Get should throw Dockerd not found' {
+
+                { $object = $dockerDsc.Get() } | Should Throw 'Dockerd.exe was not found'
+
+            }
+        }    
+
+        Context 'With no Service' {
+
+            $dockerDsc = [DockerService]::new()
+            $dockerDsc.Ensure = [Ensure]::Present
+            $dockerDsc = $dockerDsc | Add-Member -MemberType ScriptMethod -Name ResolveDockerDPath -Value { return 'TestDrive:\dockerd.exe'} -Force -PassThru
+            Mock -CommandName Get-Service -MockWith { $null }
+
+            It 'Get should return a DockerService object with ServiceInstalled as $false' {
+                $object = $dockerDsc.Get() 
+            
+                $object.GetType().Name | Should Be 'DockerService'
+                $object.Ensure | Should Be 'Present'
+                $object.Path | Should Be 'TestDrive:\dockerd.exe'
+                $object.ServiceInstalled | Should Be $false
+            }
+        }         
     }
+
     Describe 'Set Method' {
         
     }
+
 }
