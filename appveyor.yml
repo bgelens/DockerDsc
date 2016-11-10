@@ -9,7 +9,7 @@
 version: 0.0.0.{build}
 install:
     #change git location for now
-    - git clone https://github.com/bgelens/DscResource.Tests
+    - git clone https://github.com/PowerShell/DscResource.Tests
     - ps: |
         Import-Module -Name .\DscResource.Tests\TestHelper.psm1 -Force
         Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
