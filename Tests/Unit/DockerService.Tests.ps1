@@ -1,8 +1,6 @@
 $Global:ModuleName = 'DockerDsc'
 $Global:DscResourceName = 'DockerService'
 
-#using module ..\..\DSCResources\DockerService\DockerService.psd1
-
 #region HEADER
 
 # Unit Test Template Version: 1.2.0
@@ -80,7 +78,6 @@ try
         Describe 'Get Method' {
 
             Context 'With valid Path' {
-
                 $dockerDsc = [DockerService]::new()
                 $dockerDsc.Ensure = [Ensure]::Present
                 $dockerDsc = $dockerDsc | Add-Member -MemberType ScriptMethod -Name ResolveDockerDPath -Value { return 'TestDrive:\dockerd.exe' } -Force -PassThru
@@ -97,21 +94,17 @@ try
             }
 
             Context 'With invalid Path' {
-
                 $dockerDsc = [DockerService]::new()
                 $dockerDsc.Ensure = [Ensure]::Present
                 $dockerDsc = $dockerDsc | Add-Member -MemberType ScriptMethod -Name ResolveDockerDPath -Value { throw 'Dockerd.exe was not found' } -Force -PassThru
                 Mock -CommandName Get-Service -MockWith { $null }
 
                 It 'Get should throw Dockerd not found' {
-
                     { $object = $dockerDsc.Get() } | Should Throw 'Dockerd.exe was not found'
-
                 }
-            }    
+            }
 
             Context 'With no Service' {
-
                 $dockerDsc = [DockerService]::new()
                 $dockerDsc.Ensure = [Ensure]::Present
                 $dockerDsc = $dockerDsc | Add-Member -MemberType ScriptMethod -Name ResolveDockerDPath -Value { return 'TestDrive:\dockerd.exe'} -Force -PassThru
@@ -125,11 +118,119 @@ try
                     $object.Path | Should Be 'TestDrive:\dockerd.exe'
                     $object.ServiceInstalled | Should Be $false
                 }
-            }         
+            }
         }
 
         Describe 'Set Method' {
+            
+            Context 'With invalid Path' {
+                $DockerServiceResource = [DockerService]::new()
+                $DockerServiceResource.Path = 'C:\bogus'
+                $DockerServiceResource = $DockerServiceResource | Add-Member -MemberType ScriptMethod -Name ResolveDockerDPath -Value { throw 'Dockerd.exe was not found' } -Force -PassThru
+                
+                It 'Set Should throw with Ensure present' {
+                    $DockerServiceResource.Ensure = [Ensure]::Present
+                    { $DockerServiceResource.Set() } | Should Throw 'Dockerd.exe was not found'
+                }
 
+                It 'Set Should throw with Ensure Absent' {
+                    $DockerServiceResource.Ensure = [Ensure]::Absent
+                    { $DockerServiceResource.Set() } | Should Throw 'Dockerd.exe was not found'
+                }
+            }
+
+            Context 'Ensure is present' {
+                $DockerServiceResource = [DockerService]::new()
+                $DockerServiceResource.Ensure = [Ensure]::Present
+                $DockerServiceResource = $DockerServiceResource | Add-Member -MemberType ScriptMethod -Name ResolveDockerDPath -Value { return 'TestDrive:\dockerd.exe'} -Force -PassThru
+                $DockerServiceResource = $DockerServiceResource | Add-Member -MemberType ScriptMethod -Name DockerDReg -Value {} -Force -PassThru
+                Mock -CommandName Stop-Service -MockWith {}
+
+                It 'Stop-Service should not be called' {
+                    $DockerServiceResource.Set()
+                    Assert-MockCalled -CommandName Stop-Service -Times 0 -Exactly
+                }
+            }
+
+            Context 'Ensure is absent' {
+                $DockerServiceResource = [DockerService]::new()
+                $DockerServiceResource.Ensure = [Ensure]::Absent
+                $DockerServiceResource = $DockerServiceResource | Add-Member -MemberType ScriptMethod -Name ResolveDockerDPath -Value { return 'TestDrive:\dockerd.exe'} -Force -PassThru
+                $DockerServiceResource = $DockerServiceResource | Add-Member -MemberType ScriptMethod -Name DockerDReg -Value {} -Force -PassThru
+                Mock -CommandName Stop-Service -MockWith {}
+
+                It 'Docker Service does not exist, stop should not be called' {
+                    Mock -CommandName Get-Service -MockWith { }
+                    $DockerServiceResource.Set()
+                    Assert-MockCalled -CommandName Stop-Service -Times 0 -Exactly
+                }
+
+                It 'Docker Service should be force stopped when present' {
+                    Mock -CommandName Get-Service -MockWith {[pscustomobject]@{Name='Docker'}}
+                    $DockerServiceResource.Set()
+                    Assert-MockCalled -CommandName Stop-Service -Times 1 -Exactly
+                }
+            }
+        }
+
+        Describe 'ResolveDockerDPath Method' {
+            Context 'Path Construction' {
+                $DockerServiceResource = [DockerService]::new()
+                Mock -CommandName Join-Path -MockWith { param($Path,$ChildPath) process {return "$Path\$ChildPath"} }
+                Mock -CommandName Test-Path -MockWith { return $true }
+
+                It 'Should not Join-Path if dockerd.exe is part of path already and path string should be returned' {
+                    $object = $DockerServiceResource.ResolveDockerDPath('c:\bogus\dockerd.exe')
+                    Assert-MockCalled -CommandName Join-Path -Times 0 -Exactly
+                    $object | Should Be 'c:\bogus\dockerd.exe'
+                }
+
+                It 'Should Join-Path if dockerd.exe is missing from specified path and path string should return' {
+                    $object = $DockerServiceResource.ResolveDockerDPath('c:\bogus')
+                    Assert-MockCalled -CommandName Join-Path -Times 1 -Exactly
+                    $object | Should Be 'c:\bogus\dockerd.exe'
+                }
+            }
+
+            Context 'Test Path' {
+                $DockerServiceResource = [DockerService]::new()
+
+                It 'Should not throw with valid path' {
+                    Mock -CommandName Test-Path -MockWith { return $true }
+                    { $DockerServiceResource.ResolveDockerDPath('c:\bogus\dockerd.exe') } | Should Not Throw
+                }
+
+                It 'Should throw with invalid path' {
+                    Mock -CommandName Test-Path -MockWith { return $false }
+                    { $DockerServiceResource.ResolveDockerDPath('c:\bogus\dockerd.exe') } | Should Throw
+                }
+            }
+        }
+
+        Describe 'DockerDReg Method' {
+            $DockerServiceResource = [DockerService]::new()
+            $Item = New-Item -Path TestDrive:\dockerd.cmd -Value "echo %0 %*> dockerd.txt"
+            $TestLocation = Split-Path -Path $Item.FullName
+            Push-Location
+            Set-Location -Path TestDrive:
+
+            Context 'Ensure Present' {
+                $DockerServiceResource.DockerDreg("TestDrive:\dockerd.cmd",[Ensure]::Present)
+                $Result = Get-Content -Path TestDrive:\dockerd.txt
+                It 'Should have called --register-service' {
+                    $Result | Should Be ('"{0}" {1}' -f "$TestLocation\dockerd.cmd",'--register-service')
+                }
+            }
+
+            Context 'Ensure Absent' {
+                $DockerServiceResource.DockerDreg("TestDrive:\dockerd.cmd",[Ensure]::Absent)
+                $Result = Get-Content -Path TestDrive:\dockerd.txt
+                It 'Should have called --unregister-service' {
+                    $Result | Should Be ('"{0}" {1}' -f "$TestLocation\dockerd.cmd",'--unregister-service')
+                }
+            }
+
+            Pop-Location
         }
     }
 }
