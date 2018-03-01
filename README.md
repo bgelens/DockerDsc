@@ -1,5 +1,5 @@
 Build status dev: [![Build status](https://ci.appveyor.com/api/projects/status/wkyb8k22envp0rdj/branch/Dev?svg=true)](https://ci.appveyor.com/project/bgelens/dockerdsc/branch/Dev)
-
+[![codecov](https://codecov.io/gh/bgelens/DockerDsc/branch/Dev/graph/badge.svg)](https://codecov.io/gh/bgelens/DockerDsc)
 # DockerDsc
 
 This module contains resources to deal with Docker on Windows
